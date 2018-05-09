@@ -102,6 +102,7 @@ upload: $(foreach os,$(OS),$(os))
 clean-OpenSSL:
 	rm -rf build/*/openssl-$(OPENSSL_VERSION)-* \
 		build/*/libssl.a build/*/libcrypto.a \
+		build/*/OpenSSL.framework \
 		build/*/OpenSSL
 
 # Download original OpenSSL source code archive.
@@ -118,6 +119,7 @@ downloads/openssl-$(OPENSSL_VERSION).tgz:
 # Clean the bzip2 project
 clean-bzip2:
 	rm -rf build/*/bzip2-$(BZIP2_VERSION)-* \
+		build/*/BZip2.framework \
 		build/*/bzip2
 
 # Download original BZip2 source code archive.
@@ -132,6 +134,7 @@ downloads/bzip2-$(BZIP2_VERSION).tgz:
 # Clean the XZ project
 clean-xz:
 	rm -rf build/*/xz-$(XZ_VERSION)-* \
+		build/*/XZ.framework \
 		build/*/xz
 
 # Download original XZ source code archive.
@@ -149,6 +152,7 @@ clean-Python:
 		build/*/Python-$(PYTHON_VERSION)-* \
 		build/*/libpython$(PYTHON_VER)m.a \
 		build/*/pyconfig-*.h \
+		build/*/Python.framework \
 		build/*/Python
 
 # Download original Python source code archive.
@@ -276,7 +280,7 @@ $$(PYTHON_DIR-$1)/Makefile: downloads/Python-$(PYTHON_VERSION).tgz $$(PYTHON_HOS
 	mkdir -p $$(PYTHON_DIR-$1)
 	tar zxf downloads/Python-$(PYTHON_VERSION).tgz --strip-components 1 -C $$(PYTHON_DIR-$1)
 	# Apply target Python patches
-	cd $$(PYTHON_DIR-$1) && patch -p1 < $(PROJECT_DIR)/patch/Python/Python.patch
+	cd $$(PYTHON_DIR-$1) && patch -p1 --forward < $(PROJECT_DIR)/patch/Python/Python.patch
 	cp -f $(PROJECT_DIR)/patch/Python/Setup.embedded $$(PYTHON_DIR-$1)/Modules/Setup.embedded
 
 	# Configure target Python
@@ -456,6 +460,77 @@ build/$1/libpython$(PYTHON_VER)m.a: $$(foreach target,$$(TARGETS-$1),$$(PYTHON_D
 	xcrun lipo -create -output $$@ $$^
 
 vars-$1: $$(foreach target,$$(TARGETS-$1),vars-$$(target))
+
+OPENSSL_FRAMEWORK_BUILD-$1=dist/$1/OpenSSL.framework
+BZIP2_FRAMEWORK_BUILD-$1=dist/$1/BZip2.framework
+XZ_FRAMEWORK_BUILD-$1=dist/$1/XZ.framework
+PYTHON_FRAMEWORK_BUILD-$1=dist/$1/Python.framework
+
+OpenSSL.framework-$1: $$(OPENSSL_FRAMEWORK-$1)
+	# Create framework directory structure
+	mkdir -p $$(OPENSSL_FRAMEWORK_BUILD-$1)/Versions/$(OPENSSL_VERSION)
+
+	# Copy the headers
+	cp -f -r $$(OPENSSL_FRAMEWORK-$1)/Headers $$(OPENSSL_FRAMEWORK_BUILD-$1)/Versions/$(OPENSSL_VERSION)/Headers
+
+	# Copy the fat library
+	cp -f $$(OPENSSL_FRAMEWORK-$1)/libOpenSSL.a $$(OPENSSL_FRAMEWORK_BUILD-$1)/Versions/$(OPENSSL_VERSION)/OpenSSL
+
+	# Create symlinks
+	ln -fs $(OPENSSL_VERSION) $$(OPENSSL_FRAMEWORK_BUILD-$1)/Versions/Current
+	ln -fs Versions/Current/Headers $$(OPENSSL_FRAMEWORK_BUILD-$1)
+	ln -fs Versions/Current/OpenSSL $$(OPENSSL_FRAMEWORK_BUILD-$1)
+
+# Build BZip2.framework
+BZip2.framework-$1: $$(BZIP2_FRAMEWORK-$1)
+	mkdir -p $$(BZIP2_FRAMEWORK_BUILD-$1)/Versions/$(BZIP2_VERSION)
+
+	# Copy the headers
+	cp -f -r $$(BZIP2_FRAMEWORK-$1)/Headers $$(BZIP2_FRAMEWORK_BUILD-$1)/Versions/$(BZIP2_VERSION)/Headers
+
+	# Copy the fat library
+	cp -f $$(BZIP2_FRAMEWORK-$1)/libbzip2.a $$(BZIP2_FRAMEWORK_BUILD-$1)/Versions/$(BZIP2_VERSION)/bzip2
+
+	# Create symlinks
+	ln -fs $(BZIP2_VERSION) $$(BZIP2_FRAMEWORK_BUILD-$1)/Versions/Current
+	ln -fs Versions/Current/Headers $$(BZIP2_FRAMEWORK_BUILD-$1)
+	ln -fs Versions/Current/bzip2 $$(BZIP2_FRAMEWORK_BUILD-$1)
+
+# Build XZ.framework
+XZ.framework-$1: $$(XZ_FRAMEWORK-$1)
+	# Create framework directory structure
+	mkdir -p $$(XZ_FRAMEWORK_BUILD-$1)/Versions/$(XZ_VERSION)
+
+	# Copy the headers
+	cp -f -r $$(XZ_FRAMEWORK-$1)/Headers $$(XZ_FRAMEWORK_BUILD-$1)/Versions/$(XZ_VERSION)/Headers
+
+	# Copy the fat library
+	cp -f $$(XZ_FRAMEWORK-$1)/libxz.a $$(XZ_FRAMEWORK_BUILD-$1)/Versions/$(XZ_VERSION)/xz
+
+	# Create symlinks
+	ln -fs $(XZ_VERSION) $$(XZ_FRAMEWORK_BUILD-$1)/Versions/Current
+	ln -fs Versions/Current/Headers $$(XZ_FRAMEWORK_BUILD-$1)
+	ln -fs Versions/Current/xz $$(XZ_FRAMEWORK_BUILD-$1)
+
+# Build Python.framework
+Python.framework-$1: $$(PYTHON_FRAMEWORK-$1)
+	# Create framework directory structure
+	mkdir -p $$(PYTHON_FRAMEWORK_BUILD-$1)/Versions/$(PYTHON_VER)
+
+	# Copy the headers
+	cp -f -r $$(PYTHON_FRAMEWORK-$1)/Headers $$(PYTHON_FRAMEWORK_BUILD-$1)/Versions/$(PYTHON_VER)/Headers
+
+	# Copy the fat library
+	cp -f $$(PYTHON_FRAMEWORK-$1)/libPython.a $$(PYTHON_FRAMEWORK_BUILD-$1)/Versions/$(PYTHON_VER)/Python
+
+	# Copy the resources
+	cp -f -r $$(PYTHON_FRAMEWORK-$1)/Resources $$(PYTHON_FRAMEWORK_BUILD-$1)/Versions/$(PYTHON_VER)/Resources
+
+	# Create symlinks
+	ln -fs $(PYTHON_VER) $$(PYTHON_FRAMEWORK_BUILD-$1)/Versions/Current
+	ln -fs Versions/Current/Headers $$(PYTHON_FRAMEWORK_BUILD-$1)
+	ln -fs Versions/Current/Python $$(PYTHON_FRAMEWORK_BUILD-$1)
+	ln -fs Versions/Current/Resources $$(PYTHON_FRAMEWORK_BUILD-$1)
 
 endef
 
